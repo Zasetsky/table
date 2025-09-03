@@ -23,10 +23,5 @@ function onSearch(q: string) {
     <SearchBar @search="onSearch" />
     <Toolbar />
     <List />
-
-    <p class="text-xs text-gray-500">
-      * Порядок и выбор сохраняются на сервере (сессия). После перезагрузки —
-      первые 20 в сохранённом порядке, остальные по скроллу.
-    </p>
   </div>
 </template>
