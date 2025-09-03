@@ -19,7 +19,7 @@ async function onEnd() {
 
 <template>
   <ElCard shadow="never">
-    <div class="overflow-auto" style="max-height: 70vh">
+    <div class="max-h-[60vh] overflow-y-auto overflow-x-auto max-w-full">
       <table class="w-full border-collapse">
         <thead class="sticky top-0 bg-white z-10">
           <tr class="border-b">
