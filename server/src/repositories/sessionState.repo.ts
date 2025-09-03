@@ -4,7 +4,12 @@ import type { SessionState } from "../types/session.js";
 export class SessionStateRepo {
   private ensure(req: Request): SessionState {
     if (!req.session.state) {
-      req.session.state = { selected: {}, orderByQuery: {}, totalCache: {} };
+      req.session.state = {
+        selected: {},
+        orderByQuery: {},
+        totalCache: {},
+        lastQuery: "",
+      };
     }
     return req.session.state!;
   }
@@ -40,5 +45,13 @@ export class SessionStateRepo {
 
   setTotalCache(req: Request, q: string, total: number) {
     this.ensure(req).totalCache[q] = total;
+  }
+
+  getLastQuery(req: Request) {
+    return this.ensure(req).lastQuery ?? "";
+  }
+
+  setLastQuery(req: Request, q: string) {
+    this.ensure(req).lastQuery = q ?? "";
   }
 }

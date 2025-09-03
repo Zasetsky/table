@@ -30,3 +30,7 @@ export const reorder = (req: Request, res: Response) => {
 export const selectedCount = (req: Request, res: Response) => {
   res.json({ selectedCount: svc.countSelected(req) });
 };
+
+export const getSavedQuery = (req: Request, res: Response) => {
+  res.json({ q: svc.getSavedQuery(req) });
+};

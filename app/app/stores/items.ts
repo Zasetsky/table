@@ -90,5 +90,11 @@ export const useItemsStore = defineStore("items", {
       );
       this.items = [...newOrder];
     },
+
+    async initFromServer() {
+      const { get } = useApi();
+      const resp = await get<{ q: string }>("/api/items/search/last");
+      this.q = (resp?.q ?? "").trim();
+    },
   },
 });

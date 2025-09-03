@@ -3,7 +3,8 @@ import "express-session";
 export type SessionState = {
   selected: Record<number, true>;
   orderByQuery: Record<string, number[]>;
-  totalCache: Record<string, number>; // кеш total для q
+  totalCache: Record<string, number>;
+  lastQuery: string;
 };
 
 declare module "express-session" {

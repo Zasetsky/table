@@ -16,23 +16,27 @@ export class ItemsService {
     return total;
   }
 
+  getSavedQuery(req: Request) {
+    return this.repo.getLastQuery(req);
+  }
+
   list(
     req: Request,
     q: string,
     offset: number,
     limit: number
   ): Page<{ id: number; selected: boolean }> {
+    this.repo.setLastQuery(req, q);
+
     const selectedSet = new Set(this.repo.getSelected(req));
     const head = this.repo.getHead(req, q);
     const headSet = new Set(head);
 
-    // headFiltered — «голова», отфильтрованная по q
     const headFiltered: number[] = q.trim()
       ? head.filter((id) => id.toString().includes(q))
       : head.slice();
 
     const pageIds: number[] = [];
-    // Сначала берём из головы с учётом offset
     let skipped = 0;
     for (const id of headFiltered) {
       if (skipped < offset) {
@@ -42,7 +46,6 @@ export class ItemsService {
       if (pageIds.length >= limit) break;
       pageIds.push(id);
     }
-    // Добор из хвоста (возрастающий, подходящий под q, и не из головы)
     if (pageIds.length < limit) {
       let localOffset = Math.max(0, offset - headFiltered.length);
       for (const id of ascendingIdsMatching(q)) {
@@ -70,6 +73,8 @@ export class ItemsService {
   }
 
   reorder(req: Request, q: string, orderedIds: number[]) {
+    this.repo.setLastQuery(req, q);
+
     const prev = this.repo.getHead(req, q);
     const seen = new Set<number>();
     const head: number[] = [];

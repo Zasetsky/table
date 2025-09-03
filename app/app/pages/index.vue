@@ -5,13 +5,24 @@ import Toolbar from "~/components/Items/Toolbar.vue";
 import List from "~/components/Items/List.vue";
 
 const store = useItemsStore();
+const route = useRoute();
+const router = useRouter();
 
 await useAsyncData("items-init", async () => {
-  await store.search("");
+  const qFromUrl = typeof route.query.q === "string" ? route.query.q : "";
+  if (qFromUrl) {
+    store.q = qFromUrl;
+  } else {
+    await store.initFromServer();
+  }
+  await store.search(store.q);
   return store.items;
 });
 
-function onSearch(q: string) {
+async function onSearch(q: string) {
+  await router.replace({
+    query: { ...route.query, q: q || undefined }, // удаляем параметр, если пустой
+  });
   store.search(q);
 }
 </script>
