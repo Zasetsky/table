@@ -1,6 +1,9 @@
 # build
 FROM node:20-alpine AS builder
 WORKDIR /app
+ENV NUXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS=--max-old-space-size=3072
+
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
