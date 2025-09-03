@@ -1,0 +1,30 @@
+services:
+  app:
+    build: ./app
+    environment:
+      NUXT_PUBLIC_API_BASE: /api
+      NODE_ENV: production
+      PORT: 3000
+      NITRO_HOST: 0.0.0.0
+    expose:
+      - "3000"
+
+  server:
+    build: ./server
+    environment:
+      # кука сессии должна быть НЕ secure
+      NODE_ENV: development
+      PORT: 4000
+      SESSION_SECRET: dev-secret-change-me
+    expose:
+      - "4000"
+
+  web:
+    image: nginx:alpine
+    depends_on:
+      - app
+      - server
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
