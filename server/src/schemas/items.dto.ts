@@ -12,6 +12,6 @@ export const selectDto = z.object({
 });
 
 export const reorderDto = z.object({
-  q: z.string().max(50).default(""),
-  orderedIds: z.array(z.number().int().min(1).max(1_000_000)),
+  movedId: z.number().int().min(1).max(1_000_000),
+  afterId: z.number().int().min(1).max(1_000_000).nullable(),
 });

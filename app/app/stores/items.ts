@@ -25,7 +25,7 @@ export const useItemsStore = defineStore("items", {
         this.loadedIds = new Set();
         this.total = 0;
         this.hasMore = true;
-        await this.loadMore(); // первый пакет после поиска
+        await this.loadMore();
       }, "Поиск…");
     },
 
@@ -78,17 +78,23 @@ export const useItemsStore = defineStore("items", {
       );
     },
 
-    async applyReorder(newOrder: Item[]) {
+    async applyReorder(
+      movedId: number,
+      afterId: number | null,
+      fallbackOrder?: Item[]
+    ) {
       const { post } = useApi();
       const { withLoading } = useGlobalLoading();
-      await withLoading(
-        post("/api/items/reorder", {
-          q: this.q,
-          orderedIds: newOrder.map((i) => i.id),
-        }),
-        "Сохраняем порядок…"
-      );
-      this.items = [...newOrder];
+      try {
+        await withLoading(
+          post("/api/items/reorder", { movedId, afterId }),
+          "Сохраняем порядок…"
+        );
+      } catch (e) {
+        console.error("Reorder failed", e);
+        // Откатываем визуальный порядок, если передан «прежний»
+        if (fallbackOrder) this.items = fallbackOrder;
+      }
     },
 
     async initFromServer() {

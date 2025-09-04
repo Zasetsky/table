@@ -1,5 +1,5 @@
 import type { Request } from "express";
-import { ascendingIdsMatching, ONE_MILLION } from "../utils/search.js";
+import { ONE_MILLION } from "../utils/search.js";
 import type { Page } from "../utils/pagination.js";
 import { SessionStateRepo } from "../repositories/sessionState.repo.js";
 
@@ -11,13 +11,43 @@ export class ItemsService {
     if (typeof cached === "number") return cached;
     let total = 0;
     if (!q.trim()) total = ONE_MILLION;
-    else for (const _ of ascendingIdsMatching(q)) total++;
+    else {
+      // Подсчёт по строковому вхождению без материализации
+      for (let i = 1; i <= ONE_MILLION; i++) {
+        if (i.toString().includes(q)) total++;
+      }
+    }
     this.repo.setTotalCache(req, q, total);
     return total;
   }
 
   getSavedQuery(req: Request) {
     return this.repo.getLastQuery(req);
+  }
+
+  // Итератор по глобальному эффективному порядку с учётом prev/next
+  private *iterateGlobal(req: Request): Generator<number> {
+    const prev = this.repo.getPrevMap(req);
+    const next = this.repo.getNextMap(req);
+
+    // Множество «перемещённых» — их не выводим в базовой позиции
+    // (ключи prev — это все id, у которых есть новый якорь)
+    const moved = prev;
+
+    for (let base = 1; base <= ONE_MILLION; base++) {
+      if (moved[base] !== undefined) {
+        // base перемещён — пропускаем базовую позицию
+      } else {
+        // выводим базовый
+        yield base;
+        // затем «хвост» цепочки после base (если есть)
+        let n = next[base];
+        while (n !== undefined) {
+          yield n;
+          n = next[n];
+        }
+      }
+    }
   }
 
   list(
@@ -29,39 +59,24 @@ export class ItemsService {
     this.repo.setLastQuery(req, q);
 
     const selectedSet = new Set(this.repo.getSelected(req));
-    const head = this.repo.getHead(req, q);
-    const headSet = new Set(head);
-
-    const headFiltered: number[] = q.trim()
-      ? head.filter((id) => id.toString().includes(q))
-      : head.slice();
-
-    const pageIds: number[] = [];
+    const items: number[] = [];
     let skipped = 0;
-    for (const id of headFiltered) {
+
+    const query = q.trim();
+
+    for (const id of this.iterateGlobal(req)) {
+      if (query && !id.toString().includes(query)) continue;
       if (skipped < offset) {
         skipped++;
         continue;
       }
-      if (pageIds.length >= limit) break;
-      pageIds.push(id);
-    }
-    if (pageIds.length < limit) {
-      let localOffset = Math.max(0, offset - headFiltered.length);
-      for (const id of ascendingIdsMatching(q)) {
-        if (headSet.has(id)) continue;
-        if (localOffset > 0) {
-          localOffset--;
-          continue;
-        }
-        pageIds.push(id);
-        if (pageIds.length >= limit) break;
-      }
+      items.push(id);
+      if (items.length >= limit) break;
     }
 
     const total = this.countTotal(req, q);
     return {
-      items: pageIds.map((id) => ({ id, selected: selectedSet.has(id) })),
+      items: items.map((id) => ({ id, selected: selectedSet.has(id) })),
       total,
       offset,
       limit,
@@ -72,21 +87,19 @@ export class ItemsService {
     this.repo.setSelected(req, ids, on);
   }
 
-  reorder(req: Request, q: string, orderedIds: number[]) {
-    this.repo.setLastQuery(req, q);
-
-    const prev = this.repo.getHead(req, q);
-    const seen = new Set<number>();
-    const head: number[] = [];
-    for (const id of orderedIds) {
-      if (id < 1 || id > ONE_MILLION) continue;
-      if (!seen.has(id)) {
-        seen.add(id);
-        head.push(id);
-      }
+  // Новый упрощённый порядок: одно действие = «поставить X после Y»
+  reorder(req: Request, movedId: number, afterId: number | null) {
+    if (
+      !Number.isInteger(movedId) ||
+      movedId < 1 ||
+      movedId > ONE_MILLION ||
+      (afterId !== null &&
+        (!Number.isInteger(afterId) || afterId < 1 || afterId > ONE_MILLION))
+    ) {
+      return;
     }
-    for (const id of prev) if (!seen.has(id)) head.push(id);
-    this.repo.setHead(req, q, head);
+    if (afterId === movedId) return;
+    this.repo.placeAfter(req, movedId, afterId);
   }
 
   countSelected(req: Request) {

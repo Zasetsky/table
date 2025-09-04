@@ -2,9 +2,10 @@ import "express-session";
 
 export type SessionState = {
   selected: Record<number, true>;
-  orderByQuery: Record<string, number[]>;
   totalCache: Record<string, number>;
   lastQuery: string;
+  prev: Record<number, number>;
+  next: Record<number, number>;
 };
 
 declare module "express-session" {

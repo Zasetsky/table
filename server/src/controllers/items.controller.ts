@@ -22,8 +22,13 @@ export const select = (req: Request, res: Response) => {
 };
 
 export const reorder = (req: Request, res: Response) => {
-  const { q, orderedIds } = res.locals.body as ReorderBody;
-  svc.reorder(req, q, orderedIds);
+  const parse = reorderDto.safeParse(req.body);
+  if (!parse.success) {
+    res.status(400).json({ ok: false, error: parse.error.flatten() });
+    return;
+  }
+  const { movedId, afterId } = parse.data as ReorderBody;
+  svc.reorder(req, movedId, afterId);
   res.json({ ok: true });
 };
 
